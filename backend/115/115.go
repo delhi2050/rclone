@@ -627,7 +627,6 @@ func newFs(ctx context.Context, name, path string, m configmap.Mapper) (*Fs, err
 		DuplicateFiles:          false, // duplicatefiles are only possible via web
 		CanHaveEmptyDirectories: true,  // can have empty directories
 		NoMultiThreading:        true,  // set if can't have multiplethreads on one download open
-		ServerSideAcrossConfigs: true,  // Can copy from shared FS (this is checked in Copy/Move/DirMove)
 	}).Fill(ctx, f)
 
 	// setting appVer
@@ -690,6 +689,9 @@ func NewFs(ctx context.Context, name, root string, m configmap.Mapper) (fs.Fs, e
 	} else {
 		f.rootFolderID = "0" //根目录 = root directory
 	}
+
+	// Can copy from shared FS (this is checked in Copy/Move/DirMove)
+	f.features.ServerSideAcrossConfigs = f.isShare
 
 	// Set the root folder path if it is not on the absolute root
 	if f.rootFolderID != "" && f.rootFolderID != "0" {
@@ -1548,7 +1550,7 @@ func (o *Object) Open(ctx context.Context, options ...fs.OpenOption) (in io.Read
 		return nil, fmt.Errorf("can't download: %w", err)
 	}
 	if o.durl.URL == "" {
-		return nil, errors.New("can't download: no url")
+		return nil, fserrors.NoRetryError(errors.New("can't download: no url"))
 	}
 	return o.open(ctx, options...)
 }
